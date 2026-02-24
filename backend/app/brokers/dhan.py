@@ -196,9 +196,28 @@ class DhanAdapter(BrokerAdapter):
 
         except Exception as e:
             logger.error(f"Dhan auth failed: {e}")
+            # Handle case where exception might be a dictionary or have dict-like args
+            error_msg = "Dhan auth failed"
+            
+            try:
+                # Check if exception is a dictionary
+                if isinstance(e, dict):
+                    error_msg = e.get('error_message', e.get('message', str(e)))
+                # Check if exception has args that might be a dictionary
+                elif hasattr(e, 'args') and e.args:
+                    first_arg = e.args[0]
+                    if isinstance(first_arg, dict):
+                        error_msg = first_arg.get('error_message', first_arg.get('message', str(first_arg)))
+                    else:
+                        error_msg = str(first_arg)
+                else:
+                    error_msg = str(e)
+            except Exception:
+                error_msg = str(e)
+            
             return BrokerAuthResponse(
                 broker=BrokerName.DHAN, authenticated=False,
-                message=f"Dhan auth failed: {str(e)}",
+                message=error_msg,
             )
 
     async def get_holdings(self, session_token: str) -> List[Holding]:
@@ -335,10 +354,18 @@ class DhanAdapter(BrokerAdapter):
             # Extract error from different possible locations in Dhan response
             # Priority order for Dhan error messages
             if "remarks" in response:
-                error_message = response["remarks"]
+                remarks = response["remarks"]
+                if isinstance(remarks, dict):
+                    error_message = remarks.get('error_message', remarks.get('message', str(remarks)))
+                else:
+                    error_message = str(remarks)
             elif "data" in response and isinstance(response["data"], dict):
                 if "remarks" in response["data"]:
-                    error_message = response["data"]["remarks"]
+                    remarks = response["data"]["remarks"]
+                    if isinstance(remarks, dict):
+                        error_message = remarks.get('error_message', remarks.get('message', str(remarks)))
+                    else:
+                        error_message = str(remarks)
                 elif "errorMessage" in response["data"]:
                     error_message = response["data"]["errorMessage"]
                 elif "error_message" in response["data"]:
@@ -368,10 +395,29 @@ class DhanAdapter(BrokerAdapter):
 
         except Exception as e:
             logger.error(f"Dhan order failed for {instruction.symbol}: {e}")
+            # Handle case where exception might be a dictionary or have dict-like args
+            error_msg = "Dhan order failed"
+            
+            try:
+                # Check if exception is a dictionary
+                if isinstance(e, dict):
+                    error_msg = e.get('error_message', e.get('message', str(e)))
+                # Check if exception has args that might be a dictionary
+                elif hasattr(e, 'args') and e.args:
+                    first_arg = e.args[0]
+                    if isinstance(first_arg, dict):
+                        error_msg = first_arg.get('error_message', first_arg.get('message', str(first_arg)))
+                    else:
+                        error_msg = str(first_arg)
+                else:
+                    error_msg = str(e)
+            except Exception:
+                error_msg = str(e)
+            
             return OrderResult(
                 symbol=instruction.symbol, action=instruction.action,
                 quantity=abs(instruction.quantity), status=OrderStatus.FAILED,
-                message=f"Dhan order failed: {str(e)}",
+                message=error_msg,
             )
 
     async def get_order_status(self, session_token: str, order_id: str) -> OrderResult:
@@ -437,8 +483,27 @@ class DhanAdapter(BrokerAdapter):
                 message="Order not found on Dhan",
             )
         except Exception as e:
+            # Handle case where exception might be a dictionary or have dict-like args
+            error_msg = "Failed to fetch order status"
+            
+            try:
+                # Check if exception is a dictionary
+                if isinstance(e, dict):
+                    error_msg = e.get('error_message', e.get('message', str(e)))
+                # Check if exception has args that might be a dictionary
+                elif hasattr(e, 'args') and e.args:
+                    first_arg = e.args[0]
+                    if isinstance(first_arg, dict):
+                        error_msg = first_arg.get('error_message', first_arg.get('message', str(first_arg)))
+                    else:
+                        error_msg = str(first_arg)
+                else:
+                    error_msg = str(e)
+            except Exception:
+                error_msg = str(e)
+            
             return OrderResult(
                 symbol="", action=TradeAction.BUY, quantity=0,
                 status=OrderStatus.FAILED, order_id=order_id,
-                message=f"Failed to fetch order status: {str(e)}",
+                message=error_msg,
             )
